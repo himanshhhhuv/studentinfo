@@ -111,7 +111,7 @@ const Page = () => {
 						</Alert>
 					)}
 					{message && (
-						<Alert variant="success" className="mt-4">
+						<Alert variant="default" className="mt-4">
 							<AlertDescription>{message}</AlertDescription>
 						</Alert>
 					)}

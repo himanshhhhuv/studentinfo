@@ -48,7 +48,7 @@ const Page = () => {
 
     try {
       const user = auth.currentUser;
-      if (user && user.emailVerified) {
+      if (user && user.emailVerified && user.email) {
         const credential = EmailAuthProvider.credential(user.email, password);
         await reauthenticateWithCredential(user, credential);
         
