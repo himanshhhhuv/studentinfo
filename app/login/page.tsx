@@ -18,9 +18,24 @@ const Login = () => {
     const router = useRouter()
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user && user.emailVerified) {
-                router.push('/dashboard')
+                const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    switch (userData.role) {
+                        case 'teacher':
+                            router.replace('/teacherdashboard');
+                            break;
+                        case 'admin':
+                            router.replace('/admindashboard');
+                            break;
+                        case 'student':
+                        default:
+                            router.replace('/dashboard');
+                            break;
+                    }
+                }
             }
         })
 
@@ -35,21 +50,50 @@ const Login = () => {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             if (user.emailVerified) {
-                // Retrieve user data from local storage
-                const registrationData = localStorage.getItem('registrationData');
-                const { firstName = '', lastName = '', phoneNumber = '' } = registrationData ? JSON.parse(registrationData) : {};
-              
-                const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+                let userDoc = await getDoc(doc(firestore, 'users', user.uid));
+                
                 if (!userDoc.exists()) {
-                    // Save user data to Firestore
+                    // Retrieve user data from local storage
+                    const registrationData = localStorage.getItem('registrationData');
+                    const { firstName = '', lastName = '', phoneNumber = '' } = registrationData ? JSON.parse(registrationData) : {};
+                    
+                    // Save user data to Firestore with role as "student"
                     await setDoc(doc(firestore, 'users', user.uid), {
                         firstName,
                         lastName,
                         phoneNumber,
                         email: user.email,
+                        role: 'student',
                     });
+                    
+                    // Fetch the user document again to get the updated data
+                    userDoc = await getDoc(doc(firestore, 'users', user.uid));
                 }
-                router.push('/dashboard');
+                
+                // Check user role and redirect accordingly
+                const userData = userDoc.data();
+                if (userData) {
+                    // Add a small delay before navigation
+                    setTimeout(() => {
+                        switch (userData.role) {
+                            case 'teacher':
+                                router.replace('/teacherdashboard');
+                                break;
+                            case 'admin':
+                                router.replace('/admindashboard');
+                                break;
+                            case 'student':
+                            default:
+                                router.replace('/dashboard');
+                                break;
+                        }
+                    }, 100); // 100ms delay
+                } else {
+                    // If userData doesn't exist (which shouldn't happen at this point), default to student dashboard
+                    setTimeout(() => {
+                        router.replace('/dashboard');
+                    }, 100);
+                }
             } else {
                 setError('Please verify your email before logging in');
             }
@@ -63,68 +107,62 @@ const Login = () => {
     }
 
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <Card className="w-[360px] md:w-[450px] h-[500px]">
-          {" "}
-          {/* Increased height to accommodate new link */}
-          <CardHeader>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+        <Card className="w-full max-w-[400px]">
+          <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Login</CardTitle>
-            <CardDescription className="text-sm text-gray-500 font-semibold">
+            <CardDescription className="text-sm text-gray-500">
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin}>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="email" className="text-m font-semibold">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-              <Button className="w-full mt-4" type="submit">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button className="w-full" type="submit">
                 Login
               </Button>
-              <div className="mt-2 text-right">
-                <Link
-                  href="/forgot-password"
-                  className="text-md text-blue-600 hover:underline"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-              {error && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
             </form>
+            <div className="mt-4 text-right">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </CardContent>
-          <CardFooter className="flex flex-col items-center">
-            <p className="mt-4 text-md text-gray-600 font-semibold">
+          <CardFooter className="flex flex-col items-center space-y-2">
+            <p className="text-sm text-gray-600">
               Don't have an account?
             </p>
-            <Button className="mt-2 w-full bg-blue-600 hover:bg-blue-700">
-              <Link href="/register" className="text-white text-md w-full font-semibold">
+            <Button variant="outline" className="w-full">
+              <Link href="/register" className="w-full">
                Sign Up
               </Link>
             </Button>

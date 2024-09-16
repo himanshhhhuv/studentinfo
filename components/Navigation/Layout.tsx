@@ -78,11 +78,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="min-h-screen flex flex-col">
       {showHeader && (
         <header className="bg-gray-50 border-b border-gray-100 shadow-sm ">
-          <div className="lg:max-w-[60%] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <div className="lg:max-w-[60%] mx-auto px-8 sm:px-6 lg:px-4 py-4 flex justify-between items-center">
             <div className="flex items-center ">
-              <UserRound className="mr-2 p-1 h-12 w-12 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all duration-300" />
-              <h1 className="text-2xl font-normal">
-                Welcome, <span className="capitalize">{username || 'Student'}</span>
+              <UserRound className="mr-2 p-1 h-10 w-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all duration-300" />
+              <h1 className="text-sm md:text-lg font-normal">
+                Welcome, <span className="capitalize text-md md:text-lg">{username || 'Student'}</span>
               </h1>
             </div>
             {user && (

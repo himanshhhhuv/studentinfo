@@ -9,6 +9,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import Event from '@/components/Events/Event'
 import { Input } from "@/components/ui/input"
 import StudentForm from '@/components/form/StudentForm'
+import { collection, getDocs } from 'firebase/firestore'
+import { DocumentData } from 'firebase/firestore'
+
+interface Event extends DocumentData {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+}
 
 const Page = () => {
     const [user, setUser] = useState<User | null>(null)
@@ -16,46 +27,73 @@ const Page = () => {
     const [loading, setLoading] = useState(true)
     const router = useRouter()
     const [searchTerm, setSearchTerm] = useState('')
-    
+    const [events, setEvents] = useState<Event[]>([])
+    const [filteredEvents, setFilteredEvents] = useState<Event[]>([])
 
-    const TotalEvents = [{
-        title: 'Science Fair 2023',
-        description: 'Annual science exhibition for students',
-        date: 'October 15, 2023',
-        time: '10:00 AM - 4:00 PM',
-        location: 'School Auditorium'
-    },
-    {
-        title: 'Science Fair 2024',
-        description: 'Annual science exhibition for students',
-        date: 'October 15, 2024',
-        time: '10:00 AM - 4:00 PM',
-        location: 'School Auditorium'
-        },
-        {
-            title: 'book 2025',
-            description: 'Annual book exhibition for students',
-            date: 'October 15, 2025',
-            time: '10:00 AM - 4:00 PM',
-            location: 'School Auditorium'
-        },
-        {
-            title: 'book 2026',
-            description: 'Annual book exhibition for students',
-            date: 'October 15, 2026',
-            time: '10:00 AM - 4:00 PM',
-            location: 'School Auditorium'
-        }
-    ]
-const [filteredEvents, setFilteredEvents] = useState(TotalEvents);
+    // const TotalEvents = [{
+    //     title: 'Science Fair 2023',
+    //     description: 'Annual science exhibition for students',
+    //     date: 'October 15, 2023',
+    //     time: '10:00 AM - 4:00 PM',
+    //     location: 'School Auditorium'
+    // },
+    // {
+    //     title: 'Science Fair 2024',
+    //     description: 'Annual science exhibition for students',
+    //     date: 'October 15, 2024',
+    //     time: '10:00 AM - 4:00 PM',
+    //     location: 'School Auditorium'
+    //     },
+    //     {
+    //         title: 'book 2025',
+    //         description: 'Annual book exhibition for students',
+    //         date: 'October 15, 2025',
+    //         time: '10:00 AM - 4:00 PM',
+    //         location: 'School Auditorium'
+    //     },
+    //     {
+    //         title: 'book 2026',
+    //         description: 'Annual book exhibition for students',
+    //         date: 'October 15, 2026',
+    //         time: '10:00 AM - 4:00 PM',
+    //         location: 'School Auditorium'
+    //     },
+    //     { title: 'book 2027',
+    //         description: 'Annual book exhibition for students',
+    //         date: 'October 15, 2027',
+    //         time: '10:00 AM - 4:00 PM',
+    //         location: 'School Auditorium'
+    //     }
+    // ]
+
+    const fetchEvents = async () => {
+        const eventsCollection = collection(firestore, 'events')
+        const eventsSnapshot = await getDocs(eventsCollection)
+        const eventsList = eventsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            title: doc.data().title,
+            description: doc.data().description,
+            date: doc.data().date,
+            time: doc.data().time,
+            location: doc.data().location
+        } as Event))
+        setEvents(eventsList)
+        setFilteredEvents(eventsList)
+    }
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                setUser(user)
                 const userDoc = await getDoc(doc(firestore, 'users', user.uid))
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    setUsername(`${userData?.firstName} ${userData?.lastName}`)
+                    if (userData.role === 'student') {
+                        setUser(user)
+                        setUsername(`${userData.firstName} ${userData.lastName}`)
+                        await fetchEvents()  // Fetch events after user is authenticated
+                    } else {
+                        router.push('/admindashboard')
+                    }
                 } else {
                     router.push('/login')
                 }
@@ -68,23 +106,23 @@ const [filteredEvents, setFilteredEvents] = useState(TotalEvents);
     }, [router])
 
     useEffect(() => {
-        const filtered = TotalEvents.filter(event =>
+        const filtered = events.filter(event =>
             event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             event.description.toLowerCase().includes(searchTerm.toLowerCase())
         )
         setFilteredEvents(filtered)
-    }, [searchTerm])
+    }, [searchTerm, events])
 
     if (loading) {
         return <div className="flex items-center justify-center h-screen">Loading...</div>
     }
 
     return (
-      <div className="container mx-auto p-4 md:p-6 flex flex-col md:flex-row min-h-screen">
-        <div className="w-full md:w-1/3 md:pr-4 mb-4 md:mb-0">
-            <Card>
+      <div className="container mx-auto p-4 lg:p-6 flex flex-col lg:flex-row h-screen gap-6">
+        <div className="w-full lg:w-1/3 mb-6 lg:mb-0 flex flex-col h-full">
+            <Card className="flex flex-col h-full">
                 <CardHeader>
-                    <CardTitle>Events</CardTitle>
+                    <CardTitle className="text-2xl mb-2">Events</CardTitle>
                     <Input
                         type="text"
                         placeholder="Search events..."
@@ -93,10 +131,10 @@ const [filteredEvents, setFilteredEvents] = useState(TotalEvents);
                         className="mt-2"
                     />
                 </CardHeader>
-                <CardContent className="space-y-4 max-h-[500px] md:max-h-[calc(100vh-300px)] overflow-x-auto md:overflow-x-visible overflow-y-auto">
-                    <div className="flex flex-row md:flex-col">
+                <CardContent className="flex-grow overflow-hidden">
+                    <div className="h-full overflow-y-auto pr-2">
                         {filteredEvents.map((event, index) => (
-                            <div key={index} className="flex-shrink-0 w-64 md:w-full mr-4 md:mr-0">
+                            <div key={index} className="mb-4 last:mb-0">
                                 <Event
                                     title={event.title}
                                     description={event.description}
@@ -110,15 +148,15 @@ const [filteredEvents, setFilteredEvents] = useState(TotalEvents);
                 </CardContent>
             </Card>
         </div>
-        <div className="w-full md:w-2/3 md:pl-4">
-            {/* Add your main content here */}
-           
-                
-                  
-                    
+        <div className="w-full lg:w-2/3 flex flex-col h-full">
+            <Card className="flex flex-col h-full">
+                <CardHeader>
+                    <CardTitle className="text-2xl mb-2">Student Information</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow overflow-y-auto">
                     <StudentForm />
-               
-            
+                </CardContent>
+            </Card>
         </div>
       </div>
     );

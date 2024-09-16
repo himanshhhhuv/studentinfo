@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 
 const StudentForm = () => {
   return (
-    <Card className="w-full max-w-5xl mx-auto min-h-[84vh]">
-      <CardHeader>
-        <CardTitle>Student Registration</CardTitle>
+    <Card className="w-full max-w-4xl mx-auto my-8">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-2xl">Student Registration</CardTitle>
       </CardHeader>
       <CardContent>
-        <form className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+        <form className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Student Name</Label>
               <Input id="name" placeholder="Enter student name" />
@@ -67,12 +67,12 @@ const StudentForm = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="club">Club Name</Label>
               <Input id="club" placeholder="Enter club name" />
             </div>
           </div>
-          <Button type="submit" className="w-full">Submit</Button>
+          <Button type="submit" className="w-full mt-6">Submit</Button>
         </form>
       </CardContent>
     </Card>

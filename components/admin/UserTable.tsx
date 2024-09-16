@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/firebase/firebase'; // Adjust the import path as needed
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -19,32 +19,35 @@ const UserTable: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [sortField, setSortField] = useState<'firstName' | 'email' | 'role'>('firstName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [filterRole, setFilterRole] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUsers = async () => {
+    try {
+      setError(null);
+      const usersRef = collection(firestore, 'users');
+      const querySnapshot = await getDocs(usersRef);
+      const fetchedUsers: User[] = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        firstName: doc.data().firstName || '',
+        lastName: doc.data().lastName || '',
+        email: doc.data().email || '',
+        role: doc.data().role || '',
+      }));
+
+      setUsers(fetchedUsers);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+        console.error("Error fetching users:", error);
+      }
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
-  }, [sortField, sortOrder, filterRole]);
-
-  const fetchUsers = async () => {
-    const usersRef = collection(firestore, 'users');
-    let q = query(usersRef, orderBy(sortField === 'firstName' ? 'firstName' : sortField, sortOrder));
-
-    if (filterRole) {
-      q = query(q, where('role', '==', filterRole));
-    }
-
-    const querySnapshot = await getDocs(q);
-    const fetchedUsers: User[] = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      firstName: doc.data().firstName || '',
-      lastName: doc.data().lastName || '',
-      email: doc.data().email || '',
-      role: doc.data().role || '',
-    }));
-
-    setUsers(fetchedUsers);
-  };
+  }, []); // Only fetch once on component mount
 
   const handleSort = (field: 'firstName' | 'email' | 'role') => {
     if (field === sortField) {
@@ -55,14 +58,32 @@ const UserTable: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
+  const sortedAndFilteredUsers = users
+    .filter(user => filterRole === 'all' || user.role === filterRole)
+    .sort((a, b) => {
+      if (sortField === 'firstName') {
+        return sortOrder === 'asc' 
+          ? a.firstName.localeCompare(b.firstName) 
+          : b.firstName.localeCompare(a.firstName);
+      } else if (sortField === 'email') {
+        return sortOrder === 'asc' 
+          ? a.email.localeCompare(b.email) 
+          : b.email.localeCompare(a.email);
+      } else {
+        return sortOrder === 'asc' 
+          ? a.role.localeCompare(b.role) 
+          : b.role.localeCompare(a.role);
+      }
+    });
+
+  const filteredUsers = sortedAndFilteredUsers.filter(user =>
     (`${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Student Information</h1>
+      <h1 className="text-2xl font-bold">User Information</h1>
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
           placeholder="Search by name or email"
@@ -108,6 +129,15 @@ const UserTable: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+      {error && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Notice: </strong>
+          <span className="block sm:inline">
+            The Firebase index for this query is not yet available. Sorting and filtering are currently performed client-side. 
+            Please contact an administrator to create the necessary index for optimal performance.
+          </span>
+        </div>
+      )}
     </div>
   );
 };

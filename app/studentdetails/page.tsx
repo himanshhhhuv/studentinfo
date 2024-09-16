@@ -1,10 +1,11 @@
 import React from 'react';
+import StudentForm from '@/components/form/StudentForm';
 
 const StudentDetailsPage = () => {
   return (
     <div>
       <h1>Student Details</h1>
-      {/* Add your student details content here */}
+      <StudentForm />
     </div>
   );
 };
