@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Event from '@/components/Events/Event'
 import { User } from 'firebase/auth'
+import { LogOut } from 'lucide-react'
+
 
 interface Event {
   id: string;
@@ -117,7 +119,10 @@ const TeacherDashboard = () => {
           <h1 className="text-2xl font-bold">Teacher Dashboard</h1>
           <div className="flex items-center space-x-4">
             <span className="text-muted-foreground">Welcome, {username}</span>
-            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </header>

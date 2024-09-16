@@ -1,55 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '@/firebase/firebase'; // Adjust the import path as needed
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Pencil, Trash2, Key } from 'lucide-react';
 
 interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
-  // Add more fields as needed
+  phoneNumber: string; // Add this line
+  role: 'student' | 'teacher' | 'admin';
 }
 
-const UserTable: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [sortField, setSortField] = useState<'firstName' | 'email' | 'role'>('firstName');
+interface UserTableProps {
+  users: User[];
+  onRoleChange: (userId: string, newRole: 'student' | 'teacher' | 'admin') => void;
+  onDeleteUser: (userId: string) => void;
+  onEditUser: (user: User) => void;
+  onResetPassword: (email: string) => void; // Changed to expect email instead of userId
+  onCreateUser: () => void;
+}
+
+const UserTable: React.FC<UserTableProps> = ({ 
+  users, 
+  onRoleChange, 
+  onDeleteUser, 
+  onEditUser, 
+  onResetPassword,
+  onCreateUser
+}) => {
+  const [sortField, setSortField] = useState<'firstName' | 'email' | 'role' | 'phoneNumber'>('firstName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    try {
-      setError(null);
-      const usersRef = collection(firestore, 'users');
-      const querySnapshot = await getDocs(usersRef);
-      const fetchedUsers: User[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        firstName: doc.data().firstName || '',
-        lastName: doc.data().lastName || '',
-        email: doc.data().email || '',
-        role: doc.data().role || '',
-      }));
-
-      setUsers(fetchedUsers);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-        console.error("Error fetching users:", error);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []); // Only fetch once on component mount
-
-  const handleSort = (field: 'firstName' | 'email' | 'role') => {
+  const handleSort = (field: 'firstName' | 'email' | 'role' | 'phoneNumber') => {
     if (field === sortField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -69,6 +56,10 @@ const UserTable: React.FC = () => {
         return sortOrder === 'asc' 
           ? a.email.localeCompare(b.email) 
           : b.email.localeCompare(a.email);
+      } else if (sortField === 'phoneNumber') { // Add this block
+        return sortOrder === 'asc' 
+          ? a.phoneNumber.localeCompare(b.phoneNumber) 
+          : b.phoneNumber.localeCompare(a.phoneNumber);
       } else {
         return sortOrder === 'asc' 
           ? a.role.localeCompare(b.role) 
@@ -78,12 +69,17 @@ const UserTable: React.FC = () => {
 
   const filteredUsers = sortedAndFilteredUsers.filter(user =>
     (`${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    (user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.phoneNumber.includes(searchTerm)) // Add this line
   );
 
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">User Information</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">User Information</h1>
+        <Button onClick={onCreateUser}>Create New User</Button>
+      </div>
+      
       <div className="flex flex-col sm:flex-row gap-4">
         <Input
           placeholder="Search by name or email"
@@ -113,9 +109,13 @@ const UserTable: React.FC = () => {
               <TableHead className="cursor-pointer" onClick={() => handleSort('email')}>
                 Email {sortField === 'email' && (sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort('phoneNumber')}>
+                Phone {sortField === 'phoneNumber' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </TableHead>
               <TableHead className="cursor-pointer" onClick={() => handleSort('role')}>
                 Role {sortField === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -123,21 +123,52 @@ const UserTable: React.FC = () => {
               <TableRow key={user.id}>
                 <TableCell>{`${user.firstName} ${user.lastName}`}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
+                <TableCell>{user.phoneNumber}</TableCell>
+                <TableCell>
+                  <Select 
+                    value={user.role} 
+                    onValueChange={(newRole) => onRoleChange(user.id, newRole as 'student' | 'teacher' | 'admin')}
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    {/* <Button 
+                      onClick={() => onEditUser(user)} 
+                      variant="outline" 
+                      size="icon"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button> */}
+                    <Button 
+                      onClick={() => onDeleteUser(user.id)} 
+                      variant="outline" 
+                      size="icon"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      onClick={() => onResetPassword(user.email)} // Changed to use email
+                      variant="outline" 
+                      size="icon"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-      {error && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Notice: </strong>
-          <span className="block sm:inline">
-            The Firebase index for this query is not yet available. Sorting and filtering are currently performed client-side. 
-            Please contact an administrator to create the necessary index for optimal performance.
-          </span>
-        </div>
-      )}
     </div>
   );
 };
