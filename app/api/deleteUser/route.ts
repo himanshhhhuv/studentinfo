@@ -11,15 +11,29 @@ if (!getApps().length) {
   });
 }
 
+// Add DELETE handler
 export async function DELETE(req: Request) {
-  const { userId } = await req.json();
-
   try {
+    const { userId } = await req.json();
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400 });
+    }
+
     const auth = getAuth();
     await auth.deleteUser(userId);
     return new Response(JSON.stringify({ message: 'User deleted successfully' }), { status: 200 });
-  } catch (error) {
-    console.error('Error deleting user:', error);
+  } catch (error: any) {
+    console.error('Error deleting user:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     return new Response(JSON.stringify({ error: 'Failed to delete user' }), { status: 500 });
   }
+}
+
+// Optionally, retain the POST handler if needed
+export async function POST(req: Request) {
+  // Handle POST requests if necessary
 }

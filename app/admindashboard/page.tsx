@@ -5,31 +5,39 @@ import { onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
 import { auth, firestore } from "@/firebase/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, collection, query, deleteDoc } from "firebase/firestore";
 import { UserRound } from "lucide-react";
-import UserTable, { UserTableProps } from "@/components/admin/UserTable";
+import UserTable from "@/components/admin/UserTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { User as FirebaseUser } from "firebase/auth";
+import { User } from "firebase/auth";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { sendPasswordResetEmail } from "firebase/auth";
 
-interface ExtendedUser extends FirebaseUser {
+// Update the FirestoreUser type to match the User interface in UserTable
+type FirestoreUser = {
   id: string;
-  role?: 'student' | 'teacher' | 'admin';
-}
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  role: 'student' | 'teacher' | 'admin';
+};
 
 const AdminDashboard = () => {
 	const { toast } = useToast();
 	const router = useRouter();
 
-	const [user, setUser] = useState<FirebaseUser | null>(null);
+	const [user, setUser] = useState<User | null>(null);
 	const [username, setUsername] = useState("");
 	const [error, setError] = useState("");
-	const [users, setUsers] = useState<ExtendedUser[]>([]);
+	const [users, setUsers] = useState<FirestoreUser[]>([]);
 	const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-	const [pendingRoleChange, setPendingRoleChange] = useState<{ userId: string; newRole: 'student' | 'teacher' } | null>(null);
+	const [pendingRoleChange, setPendingRoleChange] = useState<{
+		userId: string;
+		newRole: 'student' | 'teacher' | 'admin';
+	} | null>(null);
 	const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
 	const [resetPasswordEmail, setResetPasswordEmail] = useState("");
 	const [isResetPasswordCooldown, setIsResetPasswordCooldown] = useState(false);
@@ -70,8 +78,8 @@ const AdminDashboard = () => {
 		const unsubscribeUsers = onSnapshot(query(collection(firestore, "users")), (snapshot) => {
 			const updatedUsers = snapshot.docs.map(doc => ({
 				id: doc.id,
-				...(doc.data() as Omit<ExtendedUser, 'id'>)
-			}));
+				...doc.data()
+			})) as FirestoreUser[];
 			setUsers(updatedUsers);
 		});
 
@@ -91,7 +99,7 @@ const AdminDashboard = () => {
 		}
 	};
 
-	const handleRoleChange: UserTableProps['onRoleChange'] = (userId, newRole) => {
+	const handleRoleChange = (userId: string, newRole: 'student' | 'teacher' | 'admin') => {
 		setPendingRoleChange({ userId, newRole });
 		setIsConfirmDialogOpen(true);
 	};
@@ -118,15 +126,15 @@ const AdminDashboard = () => {
 		}
 	};
 
-	const handleCreateUser: UserTableProps['onCreateUser'] = () => {
+	const handleCreateUser = () => {
 		// Implement user creation logic
 	};
 
-	const handleEditUser: UserTableProps['onEditUser'] = (user) => {
+	const handleEditUser = (user: FirestoreUser) => {
 		// Implement user editing logic
 	};
 
-	const handleDeleteUser: UserTableProps['onDeleteUser'] = useCallback((userId: string, userEmail: string) => {
+	const handleDeleteUser = useCallback((userId: string, userEmail: string) => {
 		setUserToDelete({ id: userId, email: userEmail });
 		setIsDeleteUserDialogOpen(true);
 	}, []);
@@ -135,7 +143,6 @@ const AdminDashboard = () => {
 		if (!userToDelete) return;
 
 		try {
-			// Call server-side function to delete user from Authentication
 			const response = await fetch('/api/deleteUser', {
 				method: 'DELETE',
 				headers: {
@@ -145,13 +152,13 @@ const AdminDashboard = () => {
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to delete user from Authentication');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to delete user from Authentication');
 			}
 
-			// Delete user document from Firestore
+			// Continue with deleting from Firestore and updating state
 			await deleteDoc(doc(firestore, "users", userToDelete.id));
 
-			// Remove the user from the local state
 			setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
 
 			toast({
@@ -162,11 +169,11 @@ const AdminDashboard = () => {
 
 			setIsDeleteUserDialogOpen(false);
 			setUserToDelete(null);
-		} catch (error) {
-			console.error("Error deleting user:", error);
+		} catch (error: any) {
+			console.error("Error deleting user:", error.message || error);
 			toast({
 				title: "Error",
-				description: "Failed to delete user. Please try again.",
+				description: error.message || "Failed to delete user. Please try again.",
 				variant: "destructive",
 				duration: 5000,
 			});
@@ -246,7 +253,7 @@ const AdminDashboard = () => {
 				<UserTable 
 					users={users} 
 					onRoleChange={handleRoleChange}
-					onDeleteUser={handleDeleteUser}
+					onDeleteUser={(userId) => handleDeleteUser(userId, users.find(u => u.id === userId)?.email || '')}
 					onEditUser={handleEditUser}
 					onResetPassword={(email) => {
 						setResetPasswordEmail(email);
