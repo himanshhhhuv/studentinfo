@@ -80,9 +80,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <header className="bg-gray-50 border-b border-gray-100 shadow-sm ">
           <div className="lg:max-w-[60%] mx-auto px-8 sm:px-6 lg:px-4 py-4 flex justify-between items-center">
             <div className="flex items-center ">
-              <UserRound className="mr-2 p-1 h-10 w-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all duration-300" />
+              <UserRound className=" h-10 w-10 rounded-full   " />
               <h1 className="text-sm md:text-lg font-normal">
-                Welcome, <span className="capitalize text-md md:text-lg">{username || 'Student'}</span>
+                Welcome, <span className="capitalize font-normal text-md md:text-lg">{username || 'Student'}</span>
               </h1>
             </div>
             {user && (
@@ -122,13 +122,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <span>Change Password</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAccountDelete}>
-                    <Trash2 className="mr-2 h-8 w-6" />
-                    <span>Delete Account</span>
+                    <Trash2 className="mr-2 h-8 w-6 text-red-500 hover:text-black" />
+                    <span className="text-red-500 ">Delete Account</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-8 w-6" />
-                    <span>Log out</span>
+                    <span className="">Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

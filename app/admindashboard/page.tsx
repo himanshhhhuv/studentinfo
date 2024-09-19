@@ -230,19 +230,19 @@ const AdminDashboard = () => {
 	}
 
 	if (!user || !username) {
-		return <div className="flex items-center justify-center h-screen">Loading...</div>;
+		return <div className="flex items-center justify-center h-screen text-2xl font-semibold">Loading...Admin Dashboard</div>;
 	}
 
 	return (
 		<div className="min-h-screen flex flex-col">
-			<header className="bg-gray-50 border-b border-gray-100 shadow-sm">
-				<div className="lg:max-w-[60%] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+			<header className="bg-gray-50 border-b border-gray-300 shadow-sm">
+				<div className="lg:max-w-[80%] mx-auto px-3 md:px-4  lg:px-8 py-3 md:py-4  flex justify-between items-center">
 					<div className="flex items-center">
-						<UserRound className="mr-2 p-1 h-12 w-12 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all duration-300" />
-						<h1 className="text-2xl font-normal">
-							Welcome, <span className="capitalize">{username}</span>
+						<h1 className="text-2xl font-semibold">
+							Admin Dashboard
 						</h1>
 					</div>
+					<div className="text-md hidden md:block font-semibold text-left">Welcome, {username}</div>
 					<Button onClick={handleLogout} variant="outline" className="flex items-center">
 						<LogOut className="mr-2 h-4 w-4" />
 						Logout

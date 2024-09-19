@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import StudentForm from '@/components/form/StudentForm'
 import { collection, getDocs } from 'firebase/firestore'
 import { DocumentData } from 'firebase/firestore'
+import { Badge } from "@/components/ui/badge"
 
 interface Event extends DocumentData {
   id: string;
@@ -19,6 +20,7 @@ interface Event extends DocumentData {
   date: string;
   time: string;
   location: string;
+  showDeleteButton: boolean;
 }
 
 const Page = () => {
@@ -29,6 +31,7 @@ const Page = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [events, setEvents] = useState<Event[]>([])
     const [filteredEvents, setFilteredEvents] = useState<Event[]>([])
+    const [formFilled, setFormFilled] = useState<boolean>(false)
 
     // const TotalEvents = [{
     //     title: 'Science Fair 2023',
@@ -90,6 +93,7 @@ const Page = () => {
                     if (userData.role === 'student') {
                         setUser(user)
                         setUsername(`${userData.firstName} ${userData.lastName}`)
+                        setFormFilled(userData.formFilled || false)  // Set formFilled based on Firestore data
                         await fetchEvents()  // Fetch events after user is authenticated
                     } else {
                         router.push('/admindashboard')
@@ -114,49 +118,64 @@ const Page = () => {
     }, [searchTerm, events])
 
     if (loading) {
-        return <div className="flex items-center justify-center h-screen">Loading...</div>
+        return <div className="flex items-center justify-center h-screen text-2xl font-semibold">Loading... Dashboard</div>
     }
 
     return (
-      <div className="container mx-auto p-4 lg:p-6 flex flex-col lg:flex-row h-screen gap-6">
-        <div className="w-full lg:w-1/3 mb-6 lg:mb-0 flex flex-col h-full">
+        <div className="container mx-auto p-3 lg:p-6 flex flex-col h-screen gap-6 
+      ">
+        {user && formFilled && (
+          <div className="w-full text-center mb-2">
+            <Badge variant="outline" className=" shadow-md tracking-wider border-green-300 border font-semibold capitalize text-md ">Form Submitted</Badge>
+          </div>
+        )}
+        <div className={`flex lg:justify-center lg:items-center flex-col lg:flex-row h-full lg:gap-10 gap-5 ${formFilled ? 'justify-center ' : ''}`}>
+          <div className={`flex flex-col h-full ${formFilled ? 'lg:w-1/3' : 'w-full  lg:w-1/3 '}`}>
             <Card className="flex flex-col h-full">
-                <CardHeader>
-                    <CardTitle className="text-2xl mb-2">Events</CardTitle>
-                    <Input
-                        type="text"
-                        placeholder="Search events..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="mt-2"
-                    />
-                </CardHeader>
-                <CardContent className="flex-grow overflow-hidden">
-                    <div className="h-full overflow-y-auto pr-2">
-                        {filteredEvents.map((event, index) => (
-                            <div key={index} className="mb-4 last:mb-0">
-                                <Event
-                                    title={event.title}
-                                    description={event.description}
-                                    date={event.date}
-                                    time={event.time}
-                                    location={event.location}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
+              <CardHeader>
+                <CardTitle className="text-2xl mb-2">Events</CardTitle>
+                <Input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mt-2"
+                />
+              </CardHeader>
+              <CardContent className="flex-grow overflow-hidden">
+                <div className="h-full overflow-y-auto pr-2">
+                  {filteredEvents.length === 0 ? (  // Check if there are no events
+                      <div className="text-center text-lg font-semibold">No events going on.</div>  // Message for no events
+                  ) : (
+                      filteredEvents.map((event, index) => (
+                          <div key={index} className="mb-4 last:mb-0">
+                              <Event
+                                  title={event.title}
+                                  description={event.description}
+                                  date={event.date}
+                                  time={event.time}
+                                  location={event.location}
+                                  showDeleteButton={false}
+                              />
+                          </div>
+                      ))
+                  )}
+                </div>
+              </CardContent>
             </Card>
-        </div>
-        <div className="w-full lg:w-2/3 flex flex-col h-full">
-            <Card className="flex flex-col h-full">
+          </div>
+          {user && !formFilled && (
+            <div className="w-full lg:w-1/2 flex flex-col h-full">
+              <Card className="flex flex-col h-full">
                 <CardHeader>
-                    <CardTitle className="text-2xl mb-2">Student Information</CardTitle>
+                  <CardTitle className="text-2xl mb-2">Student Information</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow overflow-y-auto">
-                    <StudentForm />
+                  <StudentForm />
                 </CardContent>
-            </Card>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -64,6 +64,7 @@ const Login = () => {
                         phoneNumber,
                         email: user.email,
                         role: 'student',
+                        formFilled: false
                     });
                     
                     // Fetch the user document again to get the updated data
